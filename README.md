@@ -1,1 +1,2 @@
 # Projects-Uni
+A curated collection of university course projects spanning key areas of Computer Science and Information Technology. This repository includes hands-on work from courses such as ICT, Object-Oriented Programming (OOP), Programming Fundamentals (PF), Computer Networks (CN), Information Security, Data Structures, and Artificial Intelligence. Each project reflects practical application of core concepts, showcasing problem-solving, coding proficiency, and system design across diverse domains.
