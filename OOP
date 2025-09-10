@@ -1,0 +1,1901 @@
+public class CalorieFilter implements RecipeFilter {
+    private int caloriesLimit;
+
+    public CalorieFilter(int caloriesLimit) {
+        this.caloriesLimit = caloriesLimit;
+    }
+
+    @Override
+    public boolean filter(Recipe recipe) {
+        return recipe.getTotalCalories() <= caloriesLimit;
+    } 
+} 
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class CalorieTrackerPanel {
+
+    private int dailyCalorieLimit; 
+    private int currentCalorieIntake;
+
+    private List<Recipe> allRecipes; // List to hold all recipes
+    private List<Recipe> mealPlan; // List to hold recipes in the meal plan
+    private DefaultListModel<Recipe> mealPlanListModel; // Model for the meal plan list
+
+    private User user; // Reference to the User class to save data
+
+    public CalorieTrackerPanel(User user) {
+        this.user = user; // Initialize the user reference
+        this.dailyCalorieLimit = user.getDailyCalorieLimit();
+        this.currentCalorieIntake = user.getCurrentCalorieIntake();
+
+        // Load all recipes from file
+        allRecipes = Recipe.loadRecipesFromFile("recipes.txt");
+
+        mealPlan = new ArrayList<>();
+        mealPlanListModel = new DefaultListModel<>(); 
+        
+        // Initialize mealPlan
+        if (user.getMealPlans() != null)  this.mealPlan = user.getMealPlans();  // Use the saved meal plan
+        else this.mealPlan = new ArrayList<>();  // If meal plan is null, initialize it as an empty list
+  
+        // Load the meal plan into the meal plan list model
+        for (Recipe recipe : mealPlan) {
+            mealPlanListModel.addElement(recipe);
+        }
+    }
+
+//----------------------------------------------------------------------------------------------------//
+    public JPanel createCalorieTrackerPanel() {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+        mainPanel.setBackground(new Color(255, 245, 225));  
+
+        JPanel calorieInfoPanel = createCalorieInfoPanel();
+        mainPanel.add(calorieInfoPanel, BorderLayout.NORTH);
+
+        JPanel recipesPanel = createRecipesPanel();
+        JPanel mealPlanPanel = createMealPlanPanel();
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, recipesPanel, mealPlanPanel);
+        splitPane.setDividerLocation(300); 
+        mainPanel.add(splitPane, BorderLayout.CENTER);
+
+        return mainPanel;
+    }
+
+//----------------------------------------------------------------------------------------------------//
+    private JPanel createCalorieInfoPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(new Color(255, 245, 225));
+
+        JLabel calorieGoalLabel = new JLabel("Daily Calorie Goal: " + dailyCalorieLimit);
+        JLabel calorieConsumptionLabel = new JLabel("Today's Calorie Consumption: " + currentCalorieIntake);
+        JLabel remainingCaloriesLabel = new JLabel("Remaining Calories: " + (dailyCalorieLimit - currentCalorieIntake));
+
+        Font labelFont = new Font("Arial", Font.PLAIN, 18);
+        calorieGoalLabel.setFont(labelFont);
+        calorieConsumptionLabel.setFont(labelFont);
+        remainingCaloriesLabel.setFont(labelFont);
+
+        calorieGoalLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        calorieConsumptionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        remainingCaloriesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        panel.add(calorieGoalLabel);
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(calorieConsumptionLabel);
+        panel.add(Box.createVerticalStrut(10));
+        panel.add(remainingCaloriesLabel);
+        panel.add(Box.createVerticalStrut(30));  // More space before buttons
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        buttonPanel.setBackground(new Color(255, 245, 225));
+
+        JButton updateGoalButton = new JButton("Update Goal");
+        JButton addCaloriesButton = new JButton("Add Calories");
+        JButton resetCaloriesButton = new JButton("Reset Today's Count");
+
+        Font buttonFont = new Font("Arial", Font.BOLD, 16);
+        updateGoalButton.setFont(buttonFont);
+        addCaloriesButton.setFont(buttonFont);
+        resetCaloriesButton.setFont(buttonFont);
+
+        updateGoalButton.setBackground(new Color(100, 150, 255));
+        addCaloriesButton.setBackground(new Color(150, 255, 150));
+        resetCaloriesButton.setBackground(new Color(255, 100, 100));
+
+        updateGoalButton.setForeground(Color.WHITE);
+        addCaloriesButton.setForeground(Color.WHITE);
+        resetCaloriesButton.setForeground(Color.WHITE);
+
+        updateGoalButton.addActionListener(e -> {
+            String newGoal = JOptionPane.showInputDialog("Enter new daily calorie goal:");
+            try {
+                dailyCalorieLimit = Integer.parseInt(newGoal);
+                calorieGoalLabel.setText("Daily Calorie Goal: " + dailyCalorieLimit);
+                remainingCaloriesLabel.setText("Remaining Calories: " + (dailyCalorieLimit - currentCalorieIntake));
+                // Save the updated values to the user file
+                user.setDailyCalorieLimit(dailyCalorieLimit);
+                user.saveUserToFile(user, "user.txt");  // Save user data
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Invalid number!");
+            }
+        });
+
+        addCaloriesButton.addActionListener(e -> {
+            String calories = JOptionPane.showInputDialog("Add calories for today:");
+            try {
+                int addedCalories = Integer.parseInt(calories);
+                currentCalorieIntake += addedCalories;
+                calorieConsumptionLabel.setText("Today's Calorie Consumption: " + currentCalorieIntake);
+                remainingCaloriesLabel.setText("Remaining Calories: " + (dailyCalorieLimit - currentCalorieIntake));
+                // Save the updated values to the user file
+                user.setCurrentCalorieIntake(currentCalorieIntake);
+                user.saveUserToFile(user, "user.txt");  // Save user data
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(null, "Invalid number!");
+            }
+        });
+
+        resetCaloriesButton.addActionListener(e -> {
+            currentCalorieIntake = 0;
+            calorieConsumptionLabel.setText("Today's Calorie Consumption: " + currentCalorieIntake);
+            remainingCaloriesLabel.setText("Remaining Calories: " + (dailyCalorieLimit - currentCalorieIntake));
+            JOptionPane.showMessageDialog(null, "Today's calorie count has been reset!");
+            // Save the reset value to the user file
+            user.setCurrentCalorieIntake(currentCalorieIntake);
+            user.saveUserToFile(user, "user.txt");  // Save user data
+        });
+
+        buttonPanel.add(updateGoalButton);
+        buttonPanel.add(addCaloriesButton);
+        buttonPanel.add(resetCaloriesButton);
+        panel.add(buttonPanel);
+
+        return panel;
+    }
+    
+//----------------------------------------------------------------------------------------------------//
+
+    private JPanel createRecipesPanel() {
+        JPanel recipePanel = new JPanel();
+        recipePanel.setLayout(new BorderLayout());
+        recipePanel.setBackground(new Color(255, 245, 225));
+
+        DefaultListModel<Recipe> recipeListModel = new DefaultListModel<>();
+        for (Recipe recipe : allRecipes) {
+            recipeListModel.addElement(recipe);
+        }
+
+        JList<Recipe> recipeList = new JList<>(recipeListModel);
+        JScrollPane recipeScrollPane = new JScrollPane(recipeList);
+        recipePanel.add(recipeScrollPane, BorderLayout.CENTER);
+
+        JButton addRecipeButton = new JButton("Add to Meal Plan");
+        addRecipeButton.addActionListener(e -> {
+            Recipe selectedRecipe = recipeList.getSelectedValue();
+            if (selectedRecipe != null) {
+                if (mealPlan.contains(selectedRecipe)) {
+                    JOptionPane.showMessageDialog(null, "This recipe is already in your meal plan!");
+                } else {
+                    // Add the selected recipe to the meal plan
+                    mealPlan.add(selectedRecipe);
+                    mealPlanListModel.addElement(selectedRecipe);
+                    JOptionPane.showMessageDialog(null, selectedRecipe.getName() + " added to meal plan!");
+            
+                    // Update the User object with the new meal plan
+                    user.setMealPlans(mealPlan);
+            
+                    // Save the updated User object to a file
+                    user.saveUserToFile(user, "user.txt");  // Save user data to file
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Please select a recipe to add.");
+            }
+        });
+        
+
+        recipePanel.add(addRecipeButton, BorderLayout.SOUTH);
+        return recipePanel;
+    }
+
+    //----------------------------------------------------------------------------------------------------//
+
+    private JPanel createMealPlanPanel() {
+        JPanel mealPlanPanel = new JPanel();
+        mealPlanPanel.setLayout(new BorderLayout());
+        mealPlanPanel.setBackground(new Color(255, 245, 225));
+
+        JList<Recipe> mealPlanList = new JList<>(mealPlanListModel);
+        JScrollPane mealPlanScrollPane = new JScrollPane(mealPlanList);
+        mealPlanPanel.add(mealPlanScrollPane, BorderLayout.CENTER);
+
+        JButton removeRecipeButton = new JButton("Remove from Meal Plan");
+        removeRecipeButton.addActionListener(e -> {
+            Recipe selectedRecipe = mealPlanList.getSelectedValue();
+            if (selectedRecipe != null) {
+                mealPlan.remove(selectedRecipe);
+                mealPlanListModel.removeElement(selectedRecipe);
+                user.setMealPlans(mealPlan);
+                user.saveUserToFile(user, "user.txt");
+                JOptionPane.showMessageDialog(null, selectedRecipe.getName() + " removed from meal plan!");
+            } else {
+                JOptionPane.showMessageDialog(null, "Please select a recipe to remove.");
+            }
+        });
+
+        JButton resetMealPlanButton = new JButton("Reset Meal Plan");
+        resetMealPlanButton.addActionListener(e -> {
+            mealPlan.clear();
+            mealPlanListModel.clear();
+            user.setMealPlans(mealPlan);
+            user.saveUserToFile(user, "user.txt");
+            JOptionPane.showMessageDialog(null, "Meal plan has been reset!");
+        });
+
+        JPanel mealPlanButtonPanel = new JPanel();
+        mealPlanButtonPanel.setLayout(new FlowLayout());
+        mealPlanButtonPanel.add(removeRecipeButton);
+        mealPlanButtonPanel.add(resetMealPlanButton);
+        mealPlanPanel.add(mealPlanButtonPanel, BorderLayout.SOUTH);
+
+        JButton checkCaloriesButton = new JButton("Check Meal Plan Calories");
+        checkCaloriesButton.addActionListener(e -> {
+            int totalMealPlanCalories = mealPlan.stream().mapToInt(Recipe::getTotalCalories).sum();
+            String message = "Total Meal Plan Calories: " + totalMealPlanCalories;
+            if (totalMealPlanCalories > dailyCalorieLimit) {
+                message += "\nWarning: Exceeds daily limit!";
+            }
+            JOptionPane.showMessageDialog(null, message);
+        });
+
+        mealPlanButtonPanel.add(checkCaloriesButton);
+        return mealPlanPanel;
+    }
+
+}
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class CategoryFilter implements RecipeFilter {
+    private List<String> categories; // List of allowed categories
+
+    public CategoryFilter() { 
+        this.categories = new ArrayList<>();
+        categories.add("Breakfast");
+        categories.add("Lunch");
+        categories.add("Dinner");
+        categories.add("Dessert");
+        categories.add("Drink");
+    }
+
+    public void setCategories(List<String> categories) {
+        this.categories = categories;
+    }
+
+    @Override
+    public boolean filter(Recipe recipe) {
+        if (categories.isEmpty()) {
+            return true; // No restrictions if the category list is empty
+        }
+        return categories.stream()
+                .anyMatch(category -> recipe.getCategory().equalsIgnoreCase(category));
+    }
+}
+
+
+public class CookingTimeFilter implements RecipeFilter {
+    private int maxCookingTime; // Maximum allowed cooking time in minutes
+
+    public CookingTimeFilter(int maxCookingTime) {
+        this.maxCookingTime = maxCookingTime;
+    }
+
+    @Override
+    public boolean filter(Recipe recipe) {
+        return recipe.getCookingTime() <= maxCookingTime; // Filter recipes by cooking time
+    }
+}
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DashboardPanel {
+
+    private User user;
+    private List<Recipe> allRecipes; // List to store all recipes
+
+    private JPanel mainPanel; // Reference to the main panel to reload content
+
+    public DashboardPanel(User user) {
+        this.user = user;
+        this.allRecipes = Recipe.loadRecipesFromFile("recipes.txt"); // Load recipes from file
+    }
+//------------------------------------------------------------------------------------------//
+    public JPanel createDashboardPanel() {
+        mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+
+        // Set background color
+        Color backgroundColor = new Color(255, 245, 225);
+        mainPanel.setBackground(backgroundColor);
+
+        // Button Panel
+        JPanel buttonPanel = createButtonPanel(backgroundColor);
+
+        // Add the button panel to the north of the main panel
+        mainPanel.add(buttonPanel, BorderLayout.NORTH);
+
+        // Display recipes dynamically
+        updateRecipesDisplay(mainPanel);
+
+        return mainPanel;
+    }
+//------------------------------------------------------------------------------------------//
+    private JPanel createButtonPanel(Color backgroundColor) {
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(backgroundColor);
+
+        JButton addAllergyButton = new JButton("Add Allergy");
+        JButton viewAllergyButton = new JButton("View Allergies");
+
+        addAllergyButton.addActionListener(e -> showAllergyWindow());
+        viewAllergyButton.addActionListener(e -> showViewAllergyWindow());
+
+        buttonPanel.add(addAllergyButton);
+        buttonPanel.add(viewAllergyButton);
+        return buttonPanel;
+    }
+//------------------------------------------------------------------------------------------//
+    private void updateRecipesDisplay(JPanel panel) {
+
+        JPanel recipesDisplayPanel = new JPanel();
+        recipesDisplayPanel.setLayout(new BoxLayout(recipesDisplayPanel, BoxLayout.Y_AXIS));
+        recipesDisplayPanel.setBackground(Color.WHITE);
+        recipesDisplayPanel.setBorder(BorderFactory.createTitledBorder("Filtered Recipes"));
+
+        List<Recipe> filteredRecipes = filterRecipesByAllergies(allRecipes); // Filter recipes based on allergies
+
+        // Adding recipes to the panel
+        for (Recipe recipe : filteredRecipes) {
+            JLabel recipeLabel = new JLabel(recipe.getName());
+            recipeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); // Change cursor to hand
+            recipeLabel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    showRecipeDetails(recipe); // Show recipe details on click
+                }
+            });
+            recipesDisplayPanel.add(recipeLabel);
+        }
+
+        // Add recipes panel to the main panel with scrolling
+        JScrollPane scrollPane = new JScrollPane(recipesDisplayPanel);
+        panel.add(scrollPane, BorderLayout.CENTER);
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    private List<Recipe> filterRecipesByAllergies(List<Recipe> recipes) {
+        List<Recipe> filteredRecipes = new ArrayList<>();
+        for (Recipe recipe : recipes) {
+            if (!containsAllergy(recipe)) {
+                filteredRecipes.add(recipe);
+            }
+        }
+        return filteredRecipes;
+    }
+
+    private boolean containsAllergy(Recipe recipe) {
+        for (Ingredients ingredient : recipe.getIngredients()) {
+            for (String allergy : user.getAllergies()) {
+                if (ingredient.getName().equalsIgnoreCase(allergy)) {
+                    return true; // Recipe contains an ingredient that the user is allergic to
+                }
+            }
+        }
+        return false; // No allergies found in the recipe
+    }
+
+    private void reloadPanel() {
+        mainPanel.removeAll(); // Clear the existing content
+        JPanel buttonPanel = createButtonPanel(mainPanel.getBackground()); // Recreate the button panel
+        mainPanel.add(buttonPanel, BorderLayout.NORTH); // Add the button panel again
+        updateRecipesDisplay(mainPanel); // Reapply the filtered recipes
+    }
+
+    private void showRecipeDetails(Recipe recipe) {
+        JDialog recipeDialog = new JDialog();
+        recipeDialog.setTitle(recipe.getName());
+        recipeDialog.setSize(400, 300);
+        recipeDialog.setLocationRelativeTo(null);
+
+        JTextArea recipeDetailsArea = new JTextArea();
+        recipeDetailsArea.setText(recipe.displayRecipeDetails());
+        recipeDetailsArea.setEditable(false);
+        recipeDetailsArea.setLineWrap(true);
+        recipeDetailsArea.setWrapStyleWord(true);
+
+        JScrollPane scrollPane = new JScrollPane(recipeDetailsArea);
+
+        // Close button
+        JButton closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> recipeDialog.dispose());
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(closeButton);
+
+        recipeDialog.setLayout(new BorderLayout());
+        recipeDialog.add(scrollPane, BorderLayout.CENTER);
+        recipeDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        recipeDialog.setVisible(true);
+    }
+
+    private void showAllergyWindow() {
+        JFrame allergyFrame = new JFrame("Add Allergy");
+        allergyFrame.setSize(300, 200);
+        allergyFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        allergyFrame.setLocationRelativeTo(null);
+
+        // Set background color for the frame
+        allergyFrame.getContentPane().setBackground(new Color(139, 105, 81));
+
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BorderLayout());
+        mainPanel.setBackground(new Color(139, 105, 81));
+
+        // Predefined list of allergies
+        String[] allergyList = {"Peanuts", "Gluten", "Dairy", "Shellfish", "Soy", "Eggs"};
+        JPanel allergyPanel = new JPanel();
+        allergyPanel.setLayout(new BoxLayout(allergyPanel, BoxLayout.Y_AXIS));
+        allergyPanel.setBackground(new Color(139, 105, 81));
+
+        JCheckBox[] allergyCheckBoxes = new JCheckBox[allergyList.length];
+        for (int i = 0; i < allergyList.length; i++) {
+            allergyCheckBoxes[i] = new JCheckBox(allergyList[i]);
+            allergyCheckBoxes[i].setBackground(new Color(139, 105, 81));
+            allergyCheckBoxes[i].setForeground(Color.WHITE);
+            allergyPanel.add(allergyCheckBoxes[i]);
+        }
+
+        JButton addAllergiesButton = new JButton("Add Allergies");
+        addAllergiesButton.setBackground(new Color(210, 180, 140));
+        addAllergiesButton.setForeground(Color.BLACK);
+        addAllergiesButton.setFocusPainted(false);
+        addAllergiesButton.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+
+        addAllergiesButton.addActionListener(e -> {
+            List<String> newlyAddedAllergies = new ArrayList<>();
+            for (JCheckBox checkbox : allergyCheckBoxes) {
+                if (checkbox.isSelected() && !user.getAllergies().contains(checkbox.getText())) {
+                    user.getAllergies().add(checkbox.getText());
+                    newlyAddedAllergies.add(checkbox.getText());
+                }
+            }
+
+            if (!newlyAddedAllergies.isEmpty()) {
+                User.saveUserToFile(user, "user.txt");
+                JOptionPane.showMessageDialog(allergyFrame, "Allergies added: " + String.join(", ", newlyAddedAllergies), "Success", JOptionPane.INFORMATION_MESSAGE);
+                reloadPanel(); // Reload the dashboard
+            } else {
+                JOptionPane.showMessageDialog(allergyFrame, "No new allergies were added.");
+            }
+            allergyFrame.dispose();
+        });
+
+        mainPanel.add(allergyPanel, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBackground(new Color(139, 105, 81));
+        buttonPanel.add(addAllergiesButton);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        allergyFrame.add(mainPanel);
+        allergyFrame.setVisible(true);
+    }
+
+    private void showViewAllergyWindow() {
+        JFrame viewAllergyFrame = new JFrame("View Allergies");
+        viewAllergyFrame.setSize(300, 200);
+        viewAllergyFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        viewAllergyFrame.setLayout(new BorderLayout());
+        viewAllergyFrame.setLocationRelativeTo(null);
+
+        JPanel allergyPanel = new JPanel();
+        allergyPanel.setLayout(new BoxLayout(allergyPanel, BoxLayout.Y_AXIS));
+        allergyPanel.setBackground(new Color(139, 105, 81));
+        allergyPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        for (String allergy : user.getAllergies()) {
+            JPanel allergyItemPanel = new JPanel();
+            allergyItemPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+            allergyItemPanel.setBackground(new Color(139, 105, 81));
+
+            JLabel allergyLabel = new JLabel(allergy);
+            allergyLabel.setForeground(Color.WHITE);
+
+            JButton removeButton = new JButton("Remove");
+            removeButton.setBackground(new Color(210, 180, 140));
+            removeButton.setForeground(Color.BLACK);
+
+            removeButton.addActionListener(e -> {
+                user.getAllergies().remove(allergy);
+                User.saveUserToFile(user, "user.txt");
+                reloadPanel(); // Reload the dashboard
+                viewAllergyFrame.dispose();
+                showViewAllergyWindow(); // Refresh the window
+                JOptionPane.showMessageDialog(null, allergy + " successfully removed!");
+            });
+
+            allergyItemPanel.add(allergyLabel);
+            allergyItemPanel.add(removeButton);
+            allergyPanel.add(allergyItemPanel);
+        }
+
+        viewAllergyFrame.add(allergyPanel, BorderLayout.CENTER);
+        viewAllergyFrame.setVisible(true);
+    }
+}
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class DifficultyFilter implements RecipeFilter {
+    private List<String> difficultyLevels; // List of allowed difficulty levels
+
+    public DifficultyFilter() {
+        // Initialize with default difficulties
+        this.difficultyLevels = new ArrayList<>();
+        difficultyLevels.add("easy");
+        difficultyLevels.add("medium");
+        difficultyLevels.add("hard");
+    }
+
+    public void setDifficultyLevels(List<String> difficultyLevels) {
+        this.difficultyLevels = difficultyLevels;
+    }
+
+    @Override
+    public boolean filter(Recipe recipe) {
+        if (difficultyLevels.isEmpty()) {
+            return true; // No restrictions if the difficulty list is empty
+        }
+        return difficultyLevels.stream()
+                .anyMatch(level -> recipe.getDifficulty().equalsIgnoreCase(level));
+    }
+}
+
+import javax.swing.*;
+import java.awt.*; 
+import java.awt.event.*;
+import java.io.*; 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class DigitalCookbook {
+
+    public static List<Recipe> recipes;
+    private static DefaultListModel<String> recipeListModel = new DefaultListModel<>();
+    private static JList<String> recipeList;
+    private static JTextArea recipeDetailsArea;
+    private static JFrame mainFrame;
+    private static JTextField searchField;
+    
+    private static final String FILE_NAME = "recipes.txt";
+    private static String file = "user.txt";  
+    private static User currentUser;
+
+    public DigitalCookbook() {
+        recipes = Recipe.loadRecipesFromFile(FILE_NAME); 
+        showHomePage();
+    }
+
+    public List<Recipe> getRecipes() {
+        return recipes;
+    }
+
+    public static boolean addNewRecipe(Recipe newRecipe) {
+        if (newRecipe == null || newRecipe.getName() == null || newRecipe.getName().isEmpty()) {
+            System.out.println("Invalid recipe data. Recipe name is missing.");
+            return false;
+        }
+        recipes.add(newRecipe); // Add to the list
+    
+        if (Recipe.writeRecipesToFile(recipes, FILE_NAME)) { 
+            System.out.println("New recipe added and saved successfully.");
+            loadRecipesIntoList(); 
+            return true;
+        } else {
+            System.out.println("Failed to add new recipe to the file.");
+            return false;
+        }
+    }
+
+    // Load recipes into the JList
+    public static void loadRecipesIntoList() {
+        recipeListModel.clear();
+        for (Recipe recipe : recipes) {
+            recipeListModel.addElement(recipe.getName());
+        }
+    }
+
+    public static void searchRecipes() {
+        String query = searchField.getText().toLowerCase();
+        recipeListModel.clear(); // Clear the current list
+    
+        boolean found = false; // Track if any recipe matches the query
+        for (Recipe recipe : recipes) {
+            if (recipe.getName().toLowerCase().contains(query)) {
+                recipeListModel.addElement(recipe.getName());
+                found = true;
+            }
+        }
+    
+        if (!found) {
+            JOptionPane.showMessageDialog(mainFrame, "No recipes found for the search term: " + query, "Search Result", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    
+
+    // Show details of the selected recipe
+    public static void showRecipeDetails() {
+        String selectedRecipeName = recipeList.getSelectedValue();
+        if (selectedRecipeName != null) {
+            for (Recipe recipe : recipes) {
+                if (recipe.getName().equals(selectedRecipeName)) {
+                    recipeDetailsArea.setText(recipe.displayRecipeDetails());
+                    return;
+                }
+            }
+        } else {
+            recipeDetailsArea.setText("Please select a recipe to view details.");
+        }
+    }
+
+    public static void applyFilter(JTextField caloriesField, JTextField cookingTimeField, JCheckBox breakfastCheckBox, JCheckBox lunchCheckBox, JCheckBox dinnerCheckBox, JCheckBox dessertCheckBox, JCheckBox drinkCheckBox, JCheckBox easyCheckBox, JCheckBox mediumCheckBox, JCheckBox hardCheckBox) {
+        // Get the user inputs
+        String caloriesText = caloriesField.getText();
+        String cookingTimeText = cookingTimeField.getText();
+    
+        // Collect selected categories
+        List<String> selectedCategories = new ArrayList<>();
+        if (breakfastCheckBox.isSelected()) selectedCategories.add("Breakfast");
+        if (lunchCheckBox.isSelected()) selectedCategories.add("Lunch");
+        if (dinnerCheckBox.isSelected()) selectedCategories.add("Dinner");
+        if (dessertCheckBox.isSelected()) selectedCategories.add("Dessert");
+        if (drinkCheckBox.isSelected()) selectedCategories.add("Drink");
+    
+        // Collect selected difficulty levels
+        List<String> selectedDifficulties = new ArrayList<>();
+        if (easyCheckBox.isSelected()) selectedDifficulties.add("Easy");
+        if (mediumCheckBox.isSelected()) selectedDifficulties.add("Medium");
+        if (hardCheckBox.isSelected()) selectedDifficulties.add("Hard");
+    
+        // Create filter instance
+        SearchAndFilter filter = new SearchAndFilter();
+    
+        // Apply filter by max calories
+        if (!caloriesText.isEmpty()) {
+            try {
+                int caloriesLimit = Integer.parseInt(caloriesText);
+                filter.setCaloriesLimit(caloriesLimit);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(mainFrame, "Please enter a valid number for calories.");
+                return;
+            }
+        }
+    
+        // Apply filter by max cooking time
+        if (!cookingTimeText.isEmpty()) {
+            try {
+                int cookingTimeLimit = Integer.parseInt(cookingTimeText);
+                filter.setCookingTimeLimit(cookingTimeLimit);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(mainFrame, "Please enter a valid number for cooking time.");
+                return;
+            }
+        }
+    
+        // Apply filter by selected categories (if any)
+        if (!selectedCategories.isEmpty()) {
+            filter.setCategories(selectedCategories);
+        }
+    
+        // Apply filter by selected difficulty levels (if any)
+        if (!selectedDifficulties.isEmpty()) {
+            filter.setDifficulties(selectedDifficulties);
+        }
+    
+        // Filter the recipes based on all the criteria
+        List<Recipe> filteredRecipes = filter.filterRecipes(recipes);
+    
+        // Clear the existing list and add filtered recipes
+        recipeListModel.clear();
+        for (Recipe recipe : filteredRecipes) {
+            recipeListModel.addElement(recipe.getName());
+        }
+    
+        // If no recipes match, show a message
+        if (filteredRecipes.isEmpty()) {
+            JOptionPane.showMessageDialog(mainFrame, "No recipes match the filter criteria.");
+        }
+    }
+    
+    //---------------------------------------------------------------------------------------------//
+
+// Show the home page
+public static void showHomePage() {
+    mainFrame = new JFrame("Digital Cookbook");
+    mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    mainFrame.setLayout(new BorderLayout());
+    mainFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+    // Title and logo
+    JPanel headerPanel = new JPanel(new BorderLayout());
+    headerPanel.setPreferredSize(new Dimension(mainFrame.getWidth(), 100));
+
+    // Logo and title panel (left side)
+    JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    leftPanel.setBackground(Color.decode("#B48246"));
+
+    // Load the logo image and resize it
+    ImageIcon logoIcon = new ImageIcon("logo2.jpg");
+    Image logoImage = logoIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+    logoIcon = new ImageIcon(logoImage);
+
+    // Create a JLabel with the logo image
+    JLabel logoLabel = new JLabel(logoIcon);
+    JLabel titleLabel = new JLabel("Welcome to Digital Cookbook", SwingConstants.LEFT);
+    titleLabel.setFont(new Font("Arial", Font.ITALIC, 24));
+    titleLabel.setForeground(Color.WHITE);
+
+    // Add logo and title to the leftPanel
+    leftPanel.add(logoLabel);
+    leftPanel.add(titleLabel);
+
+    // Buttons panel (right side)
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JButton loginButton = new JButton("Log In");
+    JButton signUpButton = new JButton("Sign Up");
+    buttonPanel.add(loginButton);
+    buttonPanel.add(signUpButton);
+
+    // Add left panel and button panel to the header
+    headerPanel.add(leftPanel, BorderLayout.WEST);
+    headerPanel.add(buttonPanel, BorderLayout.EAST);
+    headerPanel.setBackground(Color.decode("#B48246"));
+    buttonPanel.setBackground(Color.decode("#B48246"));
+
+    // Search and filter panels
+    JPanel contentPanel = new JPanel(new BorderLayout());
+    searchField = new JTextField(20);
+    JButton searchButton = new JButton("Search");
+    JPanel searchPanel = new JPanel();
+    searchPanel.add(new JLabel("Search Recipes:"));
+    searchPanel.add(searchField);
+    searchPanel.add(searchButton);
+
+    // Add search panel to content panel
+    contentPanel.add(searchPanel, BorderLayout.NORTH);
+
+    // Create filter panel with GridLayout (one filter per row)
+    JPanel filterPanel = new JPanel();
+    filterPanel.setLayout(new GridLayout(5, 2, 10, 10)); // 5 rows, 2 columns (1 label, 1 input)
+    filterPanel.setBackground(new Color(255, 245, 225));
+
+    // Max Calories Section
+    JLabel caloriesLabel = new JLabel("Max Calories:");
+    JTextField caloriesField = new JTextField(5);
+    filterPanel.add(caloriesLabel);
+    filterPanel.add(caloriesField);
+
+    // Max Cooking Time Section
+    JLabel cookingTimeLabel = new JLabel("Max Cooking Time (min):");
+    JTextField cookingTimeField = new JTextField(5);
+    filterPanel.add(cookingTimeLabel);
+    filterPanel.add(cookingTimeField);
+
+    // Category Section (Checkboxes)
+    JLabel categoryLabel = new JLabel("Category:");
+    JPanel categoryPanel = new JPanel(new GridLayout(1, 5, 5, 5));
+    JCheckBox breakfastCheckBox = new JCheckBox("Breakfast");
+    JCheckBox lunchCheckBox = new JCheckBox("Lunch");
+    JCheckBox dinnerCheckBox = new JCheckBox("Dinner");
+    JCheckBox dessertCheckBox = new JCheckBox("Dessert");
+    JCheckBox drinkCheckBox = new JCheckBox("Drink");
+
+    categoryPanel.add(breakfastCheckBox);
+    categoryPanel.add(lunchCheckBox);
+    categoryPanel.add(dinnerCheckBox);
+    categoryPanel.add(dessertCheckBox);
+    categoryPanel.add(drinkCheckBox);
+
+    filterPanel.add(categoryLabel);
+    filterPanel.add(categoryPanel);
+
+    // Difficulty Section (Checkboxes)
+    JLabel difficultyLabel = new JLabel("Difficulty:");
+    JPanel difficultyPanel = new JPanel(new GridLayout(1, 3, 5, 5));
+    JCheckBox easyCheckBox = new JCheckBox("Easy");
+    JCheckBox mediumCheckBox = new JCheckBox("Medium");
+    JCheckBox hardCheckBox = new JCheckBox("Hard");
+
+    difficultyPanel.add(easyCheckBox);
+    difficultyPanel.add(mediumCheckBox);
+    difficultyPanel.add(hardCheckBox);
+
+    filterPanel.add(difficultyLabel);
+    filterPanel.add(difficultyPanel);
+
+    // Apply and Clear Filter Buttons (in the same row)
+    JButton applyFilterButton = new JButton("Apply Filter");
+    JButton clearFilterButton = new JButton("Clear Filter");
+
+    JPanel buttonPanell = new JPanel();
+    buttonPanell.add(applyFilterButton);
+    buttonPanell.add(clearFilterButton);
+    filterPanel.add(new JLabel());  // Empty label to maintain layout
+    filterPanel.add(buttonPanell);
+
+    contentPanel.add(filterPanel, BorderLayout.SOUTH);
+    mainFrame.add(contentPanel, BorderLayout.CENTER);
+
+    // Header panel
+    mainFrame.add(headerPanel, BorderLayout.NORTH);
+
+    // Recipe List and Details
+    recipeList = new JList<>(recipeListModel);
+    recipeList.setBackground(new Color(230, 200, 170));
+    recipeList.setBorder(BorderFactory.createLineBorder(new Color(180, 130, 70)));
+
+    recipeDetailsArea = new JTextArea(10, 20);
+    recipeDetailsArea.setEditable(false);
+    recipeDetailsArea.setBackground(new Color(230, 200, 170));
+    recipeDetailsArea.setBorder(BorderFactory.createLineBorder(new Color(180, 130, 70)));
+
+    JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(recipeList), new JScrollPane(recipeDetailsArea));
+    splitPane.setDividerLocation(250);
+
+    contentPanel.add(splitPane, BorderLayout.CENTER);
+
+    // Populate recipe list on startup
+    loadRecipesIntoList();
+
+    // Add Listeners
+    loginButton.addActionListener(e -> showLoginWindow());
+    signUpButton.addActionListener(e -> showSignUpWindow());
+
+    // Add search functionality
+    searchButton.addActionListener(e -> searchRecipes());
+
+    // Apply filters when the button is clicked
+    applyFilterButton.addActionListener(e -> applyFilter(caloriesField, cookingTimeField, breakfastCheckBox, lunchCheckBox, dinnerCheckBox, dessertCheckBox, drinkCheckBox, easyCheckBox, mediumCheckBox, hardCheckBox));
+
+    recipeList.addListSelectionListener(e -> showRecipeDetails());
+
+    clearFilterButton.addActionListener(e -> {
+        recipeListModel.clear();
+        loadRecipesIntoList(); // Reload original recipes
+    });
+
+    // Show the frame
+    mainFrame.setVisible(true);
+}
+
+    
+//-----------------------------------------------------------------------------------------------------//
+    // Sign-Up Window
+    public static void showSignUpWindow() {
+        JFrame signUpFrame = new JFrame("Sign Up");
+        signUpFrame.setSize(400, 300);
+        signUpFrame.setLocationRelativeTo(null);
+        signUpFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        signUpFrame.getContentPane().setBackground(new Color(139, 105, 81)); // Brown shade
+
+        // Layout for sign-up window
+        signUpFrame.setLayout(new GridLayout(4, 2, 10, 10));
+
+        // Labels and input fields
+        JLabel usernameLabel = new JLabel("Username: ");
+        JTextField usernameField = new JTextField();
+        JLabel passwordLabel = new JLabel("Password: ");
+        JPasswordField passwordField = new JPasswordField();
+        JLabel nameLabel = new JLabel("Name: ");
+        JTextField nameField = new JTextField();
+        JButton signUpButton = new JButton("Sign Up");
+
+        // Add components to frame
+        signUpFrame.add(usernameLabel);
+        signUpFrame.add(usernameField);
+        signUpFrame.add(passwordLabel);
+        signUpFrame.add(passwordField);
+        signUpFrame.add(nameLabel);
+        signUpFrame.add(nameField);
+        signUpFrame.add(new JLabel());  // Empty label for spacing
+        signUpFrame.add(signUpButton);
+
+        // Action for Sign-Up button
+        signUpButton.addActionListener(e -> {
+            String username = usernameField.getText();
+            String password = new String(passwordField.getPassword());
+            String name = nameField.getText();
+
+            // Create a new User object
+            User newUser = new User(username, name, password, null);
+
+            // Save the new user to the file
+            User.saveUserToFile(newUser, file);
+            JOptionPane.showMessageDialog(signUpFrame, "Sign-up successful! Please log in.");
+            signUpFrame.dispose();  // Close sign-up window
+        });
+
+        signUpFrame.setVisible(true);
+    }
+
+    // Login Window
+    public static void showLoginWindow() {
+        JFrame loginFrame = new JFrame("Login");
+        loginFrame.setSize(400, 200);
+        loginFrame.setLocationRelativeTo(null);
+        loginFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        loginFrame.getContentPane().setBackground(new Color(139, 105, 81)); 
+
+        // Layout for login window
+        loginFrame.setLayout(new GridLayout(3, 2));
+
+        // Labels and input fields
+        JLabel usernameLabel = new JLabel("Username: ");
+        JTextField usernameField = new JTextField();
+        JLabel passwordLabel = new JLabel("Password: ");
+        JPasswordField passwordField = new JPasswordField();
+        JButton loginButton = new JButton("Login");
+
+        // Add components to frame
+        loginFrame.add(usernameLabel);
+        loginFrame.add(usernameField);
+        loginFrame.add(passwordLabel);
+        loginFrame.add(passwordField);
+        loginFrame.add(new JLabel()); 
+        loginFrame.add(loginButton);
+
+        // Action for Login button
+        loginButton.addActionListener(e -> {
+            String username = usernameField.getText();
+            String password = new String(passwordField.getPassword());
+
+            // Try to find the user in the file
+            currentUser = User.findUser(username, password, file);
+
+            if (currentUser != null) {
+                currentUser.showUserWindow();  
+                loginFrame.dispose();  
+            } else {
+                JOptionPane.showMessageDialog(loginFrame, "Invalid username or password. Please try again.");
+            }
+        });
+
+        loginFrame.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(DigitalCookbook::new);
+    }  
+}
+import java.io.Serializable;
+
+public class Ingredients implements Serializable{
+    private String name;
+    private String quantity;
+    private int calories;
+
+    // Constructor
+    public Ingredients(){}
+
+    public Ingredients(String name, String quantity, int calories) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be null or empty");
+        }
+        if (quantity == null || quantity.isEmpty()) {
+            throw new IllegalArgumentException("Quantity cannot be null or empty");
+        }
+        if (calories < 0) {
+            throw new IllegalArgumentException("Calories cannot be negative");
+        }
+        this.name = name;
+        this.quantity = quantity;
+        this.calories = calories;
+    }
+
+    // Getter for name
+    public String getName() {
+        return name;
+    }
+
+    // Setter for name
+    public void setName(String name) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("Name cannot be null or empty");
+        }
+        this.name = name;
+    }
+
+    // Getter for quantity
+    public String getQuantity() {
+        return quantity;
+    }
+
+    // Setter for quantity
+    public void setQuantity(String quantity) {
+        if (quantity == null || quantity.isEmpty()) {
+            throw new IllegalArgumentException("Quantity cannot be null or empty");
+        }
+        this.quantity = quantity;
+    }
+
+    // Getter for calories
+    public int getCalories() {
+        return calories;
+    }
+
+    // Setter for calories
+    public void setCalories(int calories) {
+        if (calories < 0) {
+            throw new IllegalArgumentException("Calories cannot be negative");
+        }
+        this.calories = calories;
+    }
+
+    // Display function
+    public void displayIngredients() {
+        try {
+            System.out.println("Ingredient: " + name);
+            System.out.println("Quantity: " + quantity);
+            System.out.println("Calories: " + calories);
+        } catch (Exception e) {
+            System.err.println("Error displaying ingredients: " + e.getMessage());
+        }
+    }
+}
+import java.io.*;
+import java.util.*;
+
+public class Recipe implements Serializable {
+    private String recipeId;
+    private String name;
+    private List<Ingredients> ingredients;
+    private String instructions;
+    private String category;
+    private int cookingTime;
+    private String difficulty;
+    private int totalCalories;
+    private double ratings;
+
+    // // Constructor
+    // public Recipe() {
+    //     this.ratings = 0;
+    // }
+
+    public Recipe(String name, List<Ingredients> ingredients, String instructions, String category, int cookingTime, String difficulty) {
+        this.recipeId = UUID.randomUUID().toString();
+        this.name = name;
+        this.ingredients = ingredients;
+        this.instructions = instructions;
+        this.category = category;
+        this.cookingTime = cookingTime;
+        this.difficulty = difficulty;
+        this.totalCalories = calculateCalories();
+        this.ratings = 0;
+    }
+
+    // Getter and Setter methods
+    public String getRecipeId() {
+        return recipeId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public List<Ingredients> getIngredients() {
+        return ingredients;
+    }
+
+    public String getInstructions() {
+        return instructions;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public int getCookingTime() {
+        return cookingTime;
+    }
+
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    public int getTotalCalories() {
+        return totalCalories;
+    }
+    @Override
+    public String toString() {
+        return name; // Return the recipe name
+    }
+
+    // Private method to calculate total calories from the ingredients
+    private int calculateCalories() {
+        return ingredients.stream().mapToInt(Ingredients::getCalories).sum();
+    }
+
+    // File I/O methods
+    private static String FILE = "recipes.txt";
+
+    public static List<Recipe> loadRecipesFromFile(String FILE) {
+        List<Recipe> recipes = new ArrayList<>();
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE))) {
+            recipes = (List<Recipe>) ois.readObject();
+        } catch (EOFException e) {
+            System.out.println("File is empty. Returning an empty list.");
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Error loading recipes: " + e.getMessage());
+        }
+        return recipes;
+    }
+
+    public static boolean writeRecipesToFile(List<Recipe> recipes, String FILE) {
+        if (recipes == null || recipes.isEmpty()) {
+            System.out.println("No recipes to write to file.");
+            return false;
+        }
+
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE))) {
+            oos.writeObject(recipes);
+            System.out.println("Recipes written to file successfully.");
+            return true;
+        } catch (IOException e) {
+            System.err.println("Error writing recipes to file: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public String displayRecipeDetails() {
+        StringBuilder recipeDetails = new StringBuilder();
+        recipeDetails.append("Name: ").append(name).append("\n")
+                .append("Category: ").append(category).append("\n")
+                .append("Cooking Time: ").append(cookingTime).append(" minutes\n")
+                .append("Difficulty: ").append(difficulty).append("\n")
+                .append("Total Calories: ").append(totalCalories).append("\n")
+                .append("Ingredients:\n");
+
+        for (Ingredients ingredient : ingredients) {
+            recipeDetails.append(ingredient.getName()).append(" - ")
+                    .append(ingredient.getQuantity()).append(" - ")
+                    .append(ingredient.getCalories()).append(" calories\n");
+        }
+
+        recipeDetails.append("Instructions: ").append(instructions).append("\n");
+        return recipeDetails.toString();
+    }
+}
+public interface RecipeFilter {
+    boolean filter(Recipe recipe);
+} 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.List;
+import java.util.ArrayList;
+
+public class RecipesPanel {
+
+    private User user;
+
+    // DefaultListModel for available recipes and favorite recipes
+    private DefaultListModel<Recipe> recipeListModel;
+    private DefaultListModel<Recipe> favoriteListModel;
+
+    // JList for displaying available recipes and favorite recipes
+    private JList<Recipe> recipeList;
+    private JList<Recipe> favoriteRecipeList;
+
+    // List to store available recipes and favorite recipes
+    public static List<Recipe> recipes;  
+    private List<Recipe> favorites;  
+
+    public RecipesPanel(User user) {
+        this.user = user;
+
+        recipeListModel = new DefaultListModel<>();
+        favoriteListModel = new DefaultListModel<>();
+
+        // If user's favorites are null, initialize as empty list
+        if(user.getFavourites() != null) this.favorites = user.getFavourites();
+        else this.favorites = new ArrayList<>();
+
+        // Load recipes from the file
+        recipes = Recipe.loadRecipesFromFile("recipes.txt");
+        // Load the user's favorite recipes into the favorite list model
+        loadFavoriteRecipes();
+    }
+
+    // Method to load the favorite recipes from the user's list
+    private void loadFavoriteRecipes() {
+        favoriteListModel.clear();
+        for (Recipe recipe : favorites) {
+            favoriteListModel.addElement(recipe);
+        }
+    }
+
+    // Method to load the available recipes into the recipe list model
+    private void loadAvailableRecipes() {
+        recipeListModel.clear();  // Clear the current list
+
+        // Add all available recipes to the model
+        for (Recipe recipe : recipes) {
+            recipeListModel.addElement(recipe);
+        }
+    }
+//-----------------------------------------------------------------------------------------------//
+    public JPanel createRecipesPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        Color backgroundColor = new Color(255, 245, 225);
+        panel.setBackground(backgroundColor);
+
+        // Panel for the left column: Recipe List
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setBackground(new Color(230, 200, 170));
+
+        JLabel recipeLabel = new JLabel("Available Recipes:");
+        recipeLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        leftPanel.add(recipeLabel, BorderLayout.NORTH);
+
+        // Set the JList for available recipes
+        recipeList = new JList<>(recipeListModel);
+        recipeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        recipeList.setBackground(backgroundColor);
+        JScrollPane recipeScrollPane = new JScrollPane(recipeList);
+        recipeScrollPane.setPreferredSize(new Dimension(200, 300)); // Adjust the size of the list
+        leftPanel.add(recipeScrollPane, BorderLayout.CENTER);
+
+        panel.add(leftPanel, BorderLayout.WEST);
+
+        // Panel for the middle column: Recipe Details
+        JPanel middlePanel = new JPanel(new BorderLayout());
+        middlePanel.setBackground(new Color(230, 200, 170));
+
+        JLabel recipeDetailsLabel = new JLabel("Recipe Details:");
+        recipeDetailsLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        middlePanel.add(recipeDetailsLabel, BorderLayout.NORTH);
+
+        JTextArea recipeDetailsArea = new JTextArea(10, 20);
+        recipeDetailsArea.setEditable(false);
+        recipeDetailsArea.setBackground(backgroundColor);
+        recipeDetailsArea.setLineWrap(true);
+        recipeDetailsArea.setWrapStyleWord(true);
+        JScrollPane recipeDetailsScrollPane = new JScrollPane(recipeDetailsArea);
+        middlePanel.add(recipeDetailsScrollPane, BorderLayout.CENTER);
+
+        panel.add(middlePanel, BorderLayout.CENTER);
+
+        // Panel for the right column: Buttons and Favorite List
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+        rightPanel.setBackground(backgroundColor);
+
+        // Upload Recipe Button
+        JButton uploadButton = new JButton("Upload Recipe");
+        uploadButton.setBackground(Color.decode("#B48246"));
+        uploadButton.setForeground(Color.WHITE);
+        uploadButton.addActionListener(e -> openRecipeUploadWindow());
+        uploadButton.setPreferredSize(new Dimension(150, 40)); // Adjust button size
+        rightPanel.add(uploadButton);
+
+        // Add to Favorites Button
+        JButton addToFavoritesButton = new JButton("Add to Favorites");
+        addToFavoritesButton.setBackground(Color.decode("#B48246"));
+        addToFavoritesButton.setForeground(Color.WHITE);
+        addToFavoritesButton.setPreferredSize(new Dimension(150, 40)); // Adjust button size
+
+        addToFavoritesButton.addActionListener(e -> {
+            Recipe selectedRecipe = recipeList.getSelectedValue();
+            if (selectedRecipe != null) {
+                if (favorites.contains(selectedRecipe)) {
+                // If recipe is already in favorites
+                    JOptionPane.showMessageDialog(panel, "Recipe is already in favorites.");
+                } else {
+                    // Add the selected recipe to favorites
+                    favorites.add(selectedRecipe);
+
+                    // Update the favorite list model to reflect the change in the UI
+                    favoriteListModel.addElement(selectedRecipe);
+ 
+                    user.setFavourites(favorites); // Update the User object with the new favorites list
+                    user.saveUserToFile(user, "user.txt");  // Save user data to file
+                    JOptionPane.showMessageDialog(panel, "Recipe added to favorites!"); // Show success message
+                }
+            } else {
+                // If no recipe is selected
+                JOptionPane.showMessageDialog(panel, "Please select a recipe to add.");
+            }
+        });
+
+        rightPanel.add(addToFavoritesButton);
+
+        // Display Favorite Recipes List
+        favoriteRecipeList = new JList<>(favoriteListModel);
+        favoriteRecipeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        favoriteRecipeList.setBackground(backgroundColor);
+
+        favoriteRecipeList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                Recipe selectedRecipe = favoriteRecipeList.getSelectedValue();
+                if (selectedRecipe != null) {
+                    // Create a dialog to show recipe details
+                    JDialog dialog = new JDialog();
+                    dialog.setTitle("Recipe Details");
+                    dialog.setSize(400, 300);
+                    dialog.setLocationRelativeTo(null);
+        
+                    JPanel dialogPanel = new JPanel(new BorderLayout());
+                    dialogPanel.setBackground(new Color(255, 245, 225));
+        
+                    JTextArea recipeDetails = new JTextArea();
+                    recipeDetails.setText(selectedRecipe.displayRecipeDetails());
+                    recipeDetails.setEditable(false);
+                    dialogPanel.add(new JScrollPane(recipeDetails), BorderLayout.CENTER);
+        
+                    // Add the "Remove from Favorites" button
+                    JButton removeFromFavoritesButton = new JButton("Remove from Favorites");
+                    
+                    removeFromFavoritesButton.addActionListener(event -> {
+
+                        if (selectedRecipe != null) {
+                            if (favorites.contains(selectedRecipe)) {
+
+                                favorites.remove(selectedRecipe);
+                                       
+                                favoriteListModel.removeElement(selectedRecipe); // Update the favorite list model to reflect the change in the UI
+                                user.setFavourites(favorites); // Update the User object with the new favorites list
+                                user.saveUserToFile(user, "user.txt");  // Save user data to file
+        
+                                loadFavoriteRecipes(); // Refresh the favorite recipe list
+        
+                                JOptionPane.showMessageDialog(null, "Recipe removed from favorites!");
+                            } else {
+                                // If the recipe is not in favorites
+                                JOptionPane.showMessageDialog(null, "Recipe is not in favorites.");
+                            }
+                        } else {
+                            // If no recipe is selected from favorites
+                            JOptionPane.showMessageDialog(null, "Please select a recipe to remove.");
+                        }
+                    });
+        
+                    dialogPanel.add(removeFromFavoritesButton, BorderLayout.SOUTH);
+                    dialog.add(dialogPanel);
+                    dialog.setVisible(true);
+                }
+            }
+        });
+        
+
+        JScrollPane favoriteRecipesScrollPane = new JScrollPane(favoriteRecipeList);
+        favoriteRecipesScrollPane.setPreferredSize(new Dimension(200, 300)); // Adjust the size of the list
+        rightPanel.add(favoriteRecipesScrollPane);
+
+        panel.add(rightPanel, BorderLayout.EAST);
+
+        // Populate the JList for available recipes
+        loadAvailableRecipes();
+
+        // Display the selected recipe's details
+        recipeList.addListSelectionListener(e -> {
+            Recipe selectedRecipe = recipeList.getSelectedValue();
+            if (selectedRecipe != null) {
+                recipeDetailsArea.setText(selectedRecipe.displayRecipeDetails());
+            }
+        });
+
+        return panel;
+    }
+//-----------------------------------------------------------------------------------------------//
+
+    // Uploading a recipe window
+    private void openRecipeUploadWindow() {
+        JFrame uploadFrame = new JFrame("Upload New Recipe");
+        uploadFrame.setSize(900, 700);
+        uploadFrame.setLocationRelativeTo(null);
+        uploadFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        // Parent panel with BorderLayout
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(230, 200, 170));
+
+        // First panel: Recipe details
+        JPanel detailsPanel = new JPanel();
+        detailsPanel.setBackground(new Color(230, 200, 170));
+        detailsPanel.setLayout(new GridLayout(0, 2, 10, 10));
+        detailsPanel.setPreferredSize(new Dimension(400, 300));
+
+        // Input fields for recipe details
+        JTextField nameField = new JTextField();
+        detailsPanel.add(new JLabel("Recipe Name:"));
+        detailsPanel.add(nameField);
+
+        // Category combobox
+        detailsPanel.add(new JLabel("Category:"));
+        JComboBox<String> catergoryBox = new JComboBox<>(new String[] {"Breakfast", "Lunch", "Dinner", "Dessert", "Drink"});
+        detailsPanel.add(catergoryBox);
+
+        // Difficulty combobox
+        detailsPanel.add(new JLabel("Difficulty:"));
+        JComboBox<String> difficultyBox = new JComboBox<>(new String[] {"Easy", "Medium", "Hard"});
+        detailsPanel.add(difficultyBox);
+
+        // Instructions field
+        JTextArea instructionsField = new JTextArea();
+        instructionsField.setLineWrap(true);
+        instructionsField.setWrapStyleWord(true);
+        JScrollPane instructionsScroll = new JScrollPane(instructionsField);
+        detailsPanel.add(new JLabel("Instructions:"));
+        detailsPanel.add(instructionsScroll);
+
+        // Cooking Time Field
+        JTextField cookingTimeField = new JTextField();
+        detailsPanel.add(new JLabel("Cooking Time:"));
+        detailsPanel.add(cookingTimeField);
+
+        // Second panel: Ingredients
+        JPanel ingredientsPanel = new JPanel();
+        ingredientsPanel.setLayout(new BorderLayout());
+        ingredientsPanel.setBackground(new Color(230, 200, 170));
+        ingredientsPanel.setPreferredSize(new Dimension(500, 400));
+
+        // Ingredient fields and Add Ingredient button
+        JPanel ingredientListPanel = new JPanel();
+        ingredientListPanel.setLayout(new BoxLayout(ingredientListPanel, BoxLayout.Y_AXIS));
+        ingredientListPanel.setBackground(new Color(230, 200, 170));
+        JScrollPane ingredientScroll = new JScrollPane(ingredientListPanel);
+        ingredientScroll.setPreferredSize(new Dimension(50, 50));
+
+        JButton addIngredientButton = new JButton("Add Ingredient");
+        addIngredientButton.addActionListener(e -> {
+            JPanel ingredientInput = ingredientsFields();
+            ingredientListPanel.add(ingredientInput);
+            ingredientsPanel.revalidate();
+        });
+
+        ingredientsPanel.add(new JLabel("Ingredients:"), BorderLayout.NORTH);
+        ingredientsPanel.add(ingredientScroll, BorderLayout.CENTER);
+        ingredientsPanel.add(addIngredientButton, BorderLayout.SOUTH);
+
+        // Submit button
+        JButton submitButton = new JButton("Submit Recipe");
+        submitButton.addActionListener(e -> {
+            try {
+                // Validate name
+                String name = nameField.getText().trim();
+                if (name.isEmpty()) {
+                    JOptionPane.showMessageDialog(uploadFrame, "Recipe name cannot be empty.");
+                    return;
+                }
+
+                // Validate category
+                String selectedCategory = (String) catergoryBox.getSelectedItem();
+                if (selectedCategory == null || selectedCategory.isEmpty()) {
+                    JOptionPane.showMessageDialog(uploadFrame, "Please select a category.");
+                    return;
+                }
+
+                // Validate difficulty
+                String selectedDifficulty = (String) difficultyBox.getSelectedItem();
+                if (selectedDifficulty == null || selectedDifficulty.isEmpty()) {
+                    JOptionPane.showMessageDialog(uploadFrame, "Please select a difficulty.");
+                    return;
+                }
+
+                // Validate instructions
+                String instructions = instructionsField.getText();
+
+                // Validate cooking time
+                String time = cookingTimeField.getText();
+                int cookingTime = Integer.parseInt(time);
+
+                // Validate ingredients
+                List<Ingredients> ingredientsList = new ArrayList<>();
+                for (Component comp : ingredientListPanel.getComponents()) {
+                    JPanel ingredientInput = (JPanel) comp;
+                    JTextField ingredientNameField = (JTextField) ingredientInput.getComponent(1);
+                    JTextField ingredientQuantityField = (JTextField) ingredientInput.getComponent(3);
+                    JTextField ingredientCaloriesField = (JTextField) ingredientInput.getComponent(5);
+
+                    String ingredientName = ingredientNameField.getText();
+                    String ingredientQuantity = ingredientQuantityField.getText();
+                    if (ingredientName.trim().isEmpty() || ingredientQuantity.trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(uploadFrame, "Ingredient name and quantity cannot be empty.");
+                        return;
+                    }
+                    int ingredientCalories = Integer.parseInt(ingredientCaloriesField.getText());
+                    ingredientsList.add(new Ingredients(ingredientName, ingredientQuantity, ingredientCalories));
+                }
+
+                // Create the recipe
+                Recipe newRecipe = new Recipe(name, ingredientsList, instructions, selectedCategory, cookingTime, selectedDifficulty);
+
+                // Add the new recipe to DigitalCookbook
+                boolean success = DigitalCookbook.addNewRecipe(newRecipe);
+
+                if (success) {
+                    recipeListModel.addElement(newRecipe);  // Add the newly uploaded recipe
+                    JOptionPane.showMessageDialog(uploadFrame, "Recipe successfully added!");
+                    uploadFrame.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(uploadFrame, "Failed to add the recipe. Please try again.");
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(uploadFrame, "Error occurred: " + ex.getMessage());
+            }
+        });
+
+        panel.add(detailsPanel, BorderLayout.NORTH);
+        panel.add(ingredientsPanel, BorderLayout.CENTER);
+        panel.add(submitButton, BorderLayout.SOUTH);
+
+        uploadFrame.add(panel);
+        uploadFrame.setVisible(true);
+    }
+
+//------------------------------------------------------------------------------------------------//
+
+    private JPanel ingredientsFields() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridLayout(3, 2, 10, 10));
+        panel.setBackground(new Color(230, 200, 170));
+        panel.add(new JLabel("Name:"));
+        panel.add(new JTextField());
+        panel.add(new JLabel("Quantity:"));
+        panel.add(new JTextField());
+        panel.add(new JLabel("Calories:"));
+        panel.add(new JTextField());
+        return panel;
+    }
+}
+
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;  
+
+public class SearchAndFilter {
+    private int caloriesLimit = Integer.MAX_VALUE;
+    private int cookingTimeLimit = Integer.MAX_VALUE;
+    private List<String> categories = new ArrayList<>();
+    private List<String> difficulties = new ArrayList<>();
+    private String searchKeyword = ""; 
+
+    // Setters for filter criteria
+    public void setCaloriesLimit(int limit) {
+        this.caloriesLimit = limit;
+    }
+
+    public void setCookingTimeLimit(int limit) {
+        this.cookingTimeLimit = limit;
+    }
+
+    public void setCategories(List<String> categories) {
+        this.categories = categories;
+    }
+
+    public void setDifficulties(List<String> difficulties) {
+        this.difficulties = difficulties;
+    }
+
+    public void setSearchKeyword(String searchKeyword) {
+        this.searchKeyword = searchKeyword.toLowerCase();  // Make it case insensitive
+    }
+
+
+    // Filter recipes based on the criteria
+    public List<Recipe> filterRecipes(List<Recipe> recipes) {
+        return recipes.stream()
+            // Filter by calories
+            .filter(recipe -> recipe.getTotalCalories() <= caloriesLimit)
+            // Filter by cooking time
+            .filter(recipe -> recipe.getCookingTime() <= cookingTimeLimit)
+            // Filter by category (if selected)
+            .filter(recipe -> categories.isEmpty() || categories.contains(recipe.getCategory()))
+            // Filter by difficulty (if selected)
+            .filter(recipe -> difficulties.isEmpty() || difficulties.contains(recipe.getDifficulty()))
+            .collect(Collectors.toList());
+    }
+}
+
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class User implements Serializable { 
+    private static final long serialVersionUID = 1L;  
+    // Attributes
+    private String username;
+    private String name;
+    private String password;
+    private List<Recipe> favourites; 
+    private List<Recipe> uploadedRecipes;
+    private List<Recipe> mealPlans;
+    private List<String> allergies; 
+    private int dailyCalorieLimit; 
+    private int currentCalorieIntake; 
+    private DigitalCookbook cookbook;
+    
+    private transient JFrame userFrame; 
+
+    // Constructor
+    public User(String username, String name, String password, DigitalCookbook cookbook) {
+        this.username = username;
+        this.name = name;
+        this.password = password;
+        this.cookbook = cookbook;
+        this.favourites = new ArrayList<>();
+        this.uploadedRecipes = new ArrayList<>();
+        this.mealPlans = new ArrayList<>();
+        this.allergies = new ArrayList<>();
+        this.dailyCalorieLimit = 0; 
+        this.currentCalorieIntake = 0; 
+    }
+
+    // Getters for user data
+    public String getUsername() {
+        return username;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public List<Recipe> getFavourites() {
+        return favourites;
+    }
+
+    public void setFavourites(List<Recipe> favourites) {
+        this.favourites = favourites;
+    }
+    
+
+    public List<Recipe> getUploadedRecipes() {
+        return uploadedRecipes;
+    }
+
+    public List<String> getAllergies() {
+        return allergies;
+    }
+    public int getDailyCalorieLimit() {
+        return dailyCalorieLimit;
+    }
+
+    public void setDailyCalorieLimit(int dailyCalorieLimit) {
+        this.dailyCalorieLimit = dailyCalorieLimit;
+    }
+
+    public int getCurrentCalorieIntake() {
+        return currentCalorieIntake;
+    }
+
+    public void setCurrentCalorieIntake(int currentCalorieIntake) {
+        this.currentCalorieIntake = currentCalorieIntake;
+    }
+
+    public List<Recipe> getMealPlans() {
+        return mealPlans;
+    }
+
+    public void setMealPlans(List<Recipe> mealPlans) {
+        this.mealPlans = mealPlans;
+    }
+
+    // USER WINDOW
+    public void showUserWindow() {
+        try {
+            UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // Main frame
+        userFrame = new JFrame("User Dashboard");
+        userFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        userFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+        userFrame.getContentPane().setBackground(Color.decode("#B48246"));
+        userFrame.setLayout(new BorderLayout());
+
+        // Header panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setPreferredSize(new Dimension(userFrame.getWidth(), 100));
+        headerPanel.setBackground(Color.decode("#B48246"));
+
+        JLabel logoLabel = new JLabel(new ImageIcon(new ImageIcon("logo2.jpg").getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH)));
+        JLabel titleLabel = new JLabel("  Welcome to Digital Cookbook", SwingConstants.LEFT);
+        titleLabel.setFont(new Font("Arial", Font.ITALIC, 24));
+        titleLabel.setForeground(Color.WHITE);
+
+        headerPanel.add(logoLabel, BorderLayout.WEST);
+        headerPanel.add(titleLabel, BorderLayout.CENTER);
+        userFrame.add(headerPanel, BorderLayout.NORTH);
+
+        // Create Side Panel with buttons for navigation
+        JPanel sidePanel = new JPanel();
+        sidePanel.setLayout(new BoxLayout(sidePanel, BoxLayout.Y_AXIS)); 
+        sidePanel.setBackground(new Color(230, 200, 170));  
+        sidePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); 
+
+        // Create and customize buttons directly here
+        JButton dashboardButton = new JButton("Dashboard");
+        JButton recipesButton = new JButton("Recipes");
+        JButton calorieTrackerButton = new JButton("Calorie Tracker");
+        JButton logOutButton = new JButton("Log Out");
+
+        // Customize button appearance
+        Font buttonFont = new Font("Arial", Font.BOLD, 14);
+        dashboardButton.setFont(buttonFont);
+        recipesButton.setFont(buttonFont);
+        calorieTrackerButton.setFont(buttonFont);
+        logOutButton.setFont(buttonFont);
+
+        dashboardButton.setPreferredSize(new Dimension(200, 50));
+        recipesButton.setPreferredSize(new Dimension(200, 50));
+        calorieTrackerButton.setPreferredSize(new Dimension(200, 50));
+        logOutButton.setPreferredSize(new Dimension(200, 50));
+
+        dashboardButton.setBackground(Color.decode("#B48246"));
+        recipesButton.setBackground(Color.decode("#B48246"));
+        calorieTrackerButton.setBackground(Color.decode("#B48246"));
+        logOutButton.setBackground(Color.decode("#B48246"));
+
+        dashboardButton.setForeground(Color.WHITE);
+        recipesButton.setForeground(Color.WHITE);
+        calorieTrackerButton.setForeground(Color.WHITE);
+        logOutButton.setForeground(Color.WHITE);
+
+        // Add action to log out button
+        logOutButton.addActionListener(e -> {
+            userFrame.dispose(); 
+        });
+
+        // Add buttons to the side panel with spacing between them
+        sidePanel.add(dashboardButton);
+        sidePanel.add(Box.createVerticalStrut(10));
+        sidePanel.add(recipesButton);
+        sidePanel.add(Box.createVerticalStrut(10));
+        sidePanel.add(calorieTrackerButton);
+        sidePanel.add(Box.createVerticalStrut(20));
+        sidePanel.add(logOutButton);
+
+        // Create main panel for displaying screens
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new CardLayout());
+
+        // Initialize the panels
+        JPanel dashboardPanel = new DashboardPanel(this).createDashboardPanel();
+        JPanel recipesPanel = new RecipesPanel(this).createRecipesPanel();
+        JPanel calorieTrackerPanel = new CalorieTrackerPanel(this).createCalorieTrackerPanel();
+
+        // Add panels to the main panel
+        mainPanel.add(dashboardPanel, "Dashboard");
+        mainPanel.add(recipesPanel, "Recipes");
+        mainPanel.add(calorieTrackerPanel, "Calorie Tracker");
+
+        // Add listeners for navigation
+        CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+        dashboardButton.addActionListener(e -> cardLayout.show(mainPanel, "Dashboard"));
+        recipesButton.addActionListener(e -> cardLayout.show(mainPanel, "Recipes"));
+        calorieTrackerButton.addActionListener(e -> cardLayout.show(mainPanel, "Calorie Tracker"));
+
+        // Add components to the main frame
+        userFrame.add(sidePanel, BorderLayout.WEST);
+        userFrame.add(mainPanel, BorderLayout.CENTER);
+
+        userFrame.setVisible(true);
+    }
+//-----------------------------------------------------------------------------------------------//
+    // File handling methods
+    public static final String FILE = "user.txt";
+
+    public static void saveUserToFile(User updatedUser, String FILE) {
+        // Load existing users from the file
+        List<User> users = loadAllUsersFromFile(FILE);
+    
+        // Find and update the existing user
+        boolean userFound = false;
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).getUsername().equals(updatedUser.getUsername())) {
+                users.set(i, updatedUser); // Update the user in the list
+                userFound = true;
+                break;
+            }
+        }
+        
+        if (!userFound) {
+            users.add(updatedUser);
+        }
+    
+        // Save the updated list of users back to the file
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(FILE))) {
+            oos.writeObject(users); // Save the list of users
+            System.out.println("User saved successfully!");
+        } catch (IOException e) {
+            System.err.println("Error saving user to file: " + e.getMessage());
+        }
+    }
+
+    // public boolean addRecipeToFavorites(Recipe recipe) {
+    //     // Check if the recipe is already in the favorites list
+    //     if (!favourites.contains(recipe)) {
+    //         favourites.add(recipe);  // Add recipe to the favorites list
+    //         System.out.println("Recipe added to favorites: " + recipe.getName()); // Debugging line
+    
+    //         // Save the updated user object to the file
+    //         User.saveUserToFile(this, "user.txt");  // Ensure you're saving the correct instance of the User class
+    
+    //         return true;  // Successfully added
+    //     } else {
+    //         System.out.println("Recipe already in favorites: " + recipe.getName()); // Debugging line
+    //         return false;  // Recipe was already in the favorites
+    //     }
+    // }
+
+    // // Remove a recipe from favorites
+    // public boolean removeRecipeFromFavorites(Recipe recipe) {
+    //     if (favourites.contains(recipe)) {
+    //         favourites.remove(recipe);  // Remove the recipe from the list
+    //         saveUserToFile(this, FILE);  // Save the updated user data to the file
+    //         return true;  // Successfully removed
+    //     } else {
+    //         return false;  // Recipe not found in favorites
+    //     }
+    // }
+
+    // Load all User objects from file
+    public static List<User> loadAllUsersFromFile(String FILE) {
+        List<User> users = new ArrayList<>();
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(FILE))) {
+            users = (List<User>) ois.readObject(); // Read the entire list of users
+        } catch (IOException | ClassNotFoundException e) {
+            System.err.println("Error reading users from file: " + e.getMessage());
+        }
+        return users;
+    }
+
+    // Find a User by username and password during login
+    public static User findUser(String username, String password, String FILE) {
+        List<User> users = loadAllUsersFromFile(FILE); // Load users from the file
+
+        // Check if user exists and credentials match
+        for (User user : users) {
+            if (user.getUsername().equals(username) && user.getPassword().equals(password)) {
+                return user; // Return the user if credentials match
+            }
+        }
+        return null; // Return null if no user matches the credentials
+    }
+}
